@@ -1,7 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
-
+const path = require("path");
 const app = express();
 dotenv.config();
 app.use(cors());
@@ -32,5 +32,11 @@ app.use("/api/ligne_commandes", ligneCommandeRoutes);
 app.use("/api/factures", factureRoutes);
 app.use("/api/ligne_factures", ligneFactureRoutes);
 app.use("/api/email", emailRoutes);
+
+//dist reactjs
+app.use(express.static(path.join(__dirname, "./client/build")));
+app.get("/{*any}", (req, res) => {
+  res.sendFile(path.join(__dirname, "./client/build/index.html"));
+});
 
 module.exports = app;
