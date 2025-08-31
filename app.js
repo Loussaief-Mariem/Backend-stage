@@ -20,6 +20,7 @@ const ligneCommandeRoutes = require("./routes/ligneCommande.route");
 const factureRoutes = require("./routes/facture.routes");
 const ligneFactureRoutes = require("./routes/ligneFacture.routes");
 const emailRoutes = require("./routes/email.routes");
+const authRouter = require("./routes/auth.route");
 app.use("/api/categories", categorieRouter);
 app.use("/api/utilisateurs", utilisateurRouter);
 app.use("/api/clients", clientRoutes);
@@ -32,6 +33,8 @@ app.use("/api/ligne_commandes", ligneCommandeRoutes);
 app.use("/api/factures", factureRoutes);
 app.use("/api/ligne_factures", ligneFactureRoutes);
 app.use("/api/email", emailRoutes);
+
+app.use("/api/auth", authRouter);
 
 //dist reactjs
 app.use(express.static(path.join(__dirname, "./client/build")));

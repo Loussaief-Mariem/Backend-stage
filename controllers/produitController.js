@@ -52,6 +52,30 @@ exports.getProduitsPagines = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+//$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+// Obtenir les produits créés il y a moins d'1 an
+exports.getProduitsDeCetteAnnee = async (req, res) => {
+  try {
+    const now = new Date();
+
+    const debutAnnee = new Date(now.getFullYear(), 0, 1);
+
+    const finAnnee = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+
+    const produits = await Produit.find({
+      createdAt: { $gte: debutAnnee, $lte: finAnnee },
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(produits);
+  } catch (error) {
+    console.error("Erreur getProduitsDeCetteAnnee:", error);
+    res.status(500).json({
+      message: "Erreur lors de la récupération des produits de cette année",
+    });
+  }
+};
+
+//$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 //  Obtenir un seul produit par ID
 exports.getProduitById = async (req, res) => {
