@@ -21,6 +21,7 @@ const factureRoutes = require("./routes/facture.routes");
 const ligneFactureRoutes = require("./routes/ligneFacture.routes");
 const emailRoutes = require("./routes/email.routes");
 const authRouter = require("./routes/auth.route");
+const headerRouter = require("./routes/header.route");
 app.use("/api/categories", categorieRouter);
 app.use("/api/utilisateurs", utilisateurRouter);
 app.use("/api/clients", clientRoutes);
@@ -35,6 +36,7 @@ app.use("/api/ligne_factures", ligneFactureRoutes);
 app.use("/api/email", emailRoutes);
 
 app.use("/api/auth", authRouter);
+app.use("/api/headers", headerRouter);
 
 //dist reactjs
 app.use(express.static(path.join(__dirname, "./client/build")));

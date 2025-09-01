@@ -1,4 +1,5 @@
 const Produit = require("../models/produit.model");
+const LigneCommande = require("../models/ligneCommande.model");
 
 //  Ajouter un produit
 exports.createProduit = async (req, res) => {
@@ -53,7 +54,7 @@ exports.getProduitsPagines = async (req, res) => {
   }
 };
 //$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-// Obtenir les produits créés il y a moins d'1 an
+// Obtenir les produits nouveaux
 exports.getProduitsDeCetteAnnee = async (req, res) => {
   try {
     const now = new Date();
@@ -129,5 +130,123 @@ exports.getProduitCount = async (req, res) => {
     res.status(200).json({ totalProduits: count });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+// Récupérer les best-sellers
+exports.getBestSellers = async (req, res) => {
+  try {
+    const { limit = 10 } = req.query; // Nombre de produits à retourner
+
+    const bestSellers = await LigneCommande.aggregate([
+      // Filtrer seulement les lignes actives
+      { $match: { statut: "Active" } },
+
+      // Grouper par produit et calculer la quantité totale vendue
+      {
+        $group: {
+          _id: "$produitId",
+          totalVentes: { $sum: "$quantite" },
+          nombreCommandes: { $sum: 1 },
+        },
+      },
+
+      // Trier par quantité vendue (descendant)
+      { $sort: { totalVentes: -1 } },
+
+      // Limiter le nombre de résultats
+      { $limit: parseInt(limit) },
+
+      // Joindre avec les informations du produit
+      {
+        $lookup: {
+          from: "produits",
+          localField: "_id",
+          foreignField: "_id",
+          as: "produit",
+        },
+      },
+
+      // Déstructurer le tableau produit
+      { $unwind: "$produit" },
+
+      // Projection pour formater la réponse
+      {
+        $project: {
+          _id: "$produit._id",
+          nom: "$produit.nom",
+          description: "$produit.description",
+          image: "$produit.image",
+          prix: "$produit.prix",
+          reference: "$produit.reference",
+          totalVentes: 1,
+          nombreCommandes: 1,
+        },
+      },
+    ]);
+
+    res.status(200).json(bestSellers);
+  } catch (error) {
+    console.error("Erreur récupération best-sellers:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};
+
+// Alternative: Best-sellers avec pagination
+exports.getBestSellersPaginated = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const bestSellers = await LigneCommande.aggregate([
+      { $match: { statut: "Active" } },
+      {
+        $group: {
+          _id: "$produitId",
+          totalVentes: { $sum: "$quantite" },
+          nombreCommandes: { $sum: 1 },
+        },
+      },
+      { $sort: { totalVentes: -1 } },
+      { $skip: skip },
+      { $limit: parseInt(limit) },
+      {
+        $lookup: {
+          from: "produits",
+          localField: "_id",
+          foreignField: "_id",
+          as: "produit",
+        },
+      },
+      { $unwind: "$produit" },
+      {
+        $project: {
+          _id: "$produit._id",
+          nom: "$produit.nom",
+          image: "$produit.image",
+          prix: "$produit.prix",
+          totalVentes: 1,
+          nombreCommandes: 1,
+        },
+      },
+    ]);
+
+    // Compter le total
+    const totalCount = await LigneCommande.aggregate([
+      { $match: { statut: "Active" } },
+      { $group: { _id: "$produitId" } },
+      { $count: "total" },
+    ]);
+
+    res.status(200).json({
+      bestSellers,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil((totalCount[0]?.total || 0) / limit),
+      totalBestSellers: totalCount[0]?.total || 0,
+    });
+  } catch (error) {
+    console.error("Erreur récupération best-sellers paginés:", error);
+    res.status(500).json({ message: "Erreur serveur" });
   }
 };
