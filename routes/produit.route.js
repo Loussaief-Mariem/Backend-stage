@@ -5,7 +5,7 @@ const produitController = require("../controllers/produitController");
 // Routes existantes
 router.get("/pagines", produitController.getProduitsPagines);
 router.post("/", produitController.createProduit);
-router.get("/best-sellers", produitController.getBestSellers); // Nouvelle route
+router.get("/best-sellers", produitController.getBestSellers);
 router.get(
   "/best-sellers/paginated",
   produitController.getBestSellersPaginated

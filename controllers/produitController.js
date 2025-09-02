@@ -133,12 +133,22 @@ exports.getProduitCount = async (req, res) => {
   }
 };
 // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-
 // Récupérer les best-sellers
 exports.getBestSellers = async (req, res) => {
   try {
-    const { limit = 10 } = req.query; // Nombre de produits à retourner
+    const { limit = 4 } = req.query;
 
+    console.log("Début getBestSellers avec limit:", limit);
+
+    // D'abord, vérifions ce qu'il y a dans la collection LigneCommande
+    const toutesLignes = await LigneCommande.find().populate("produitId");
+    console.log("Toutes les lignes de commande:", toutesLignes);
+
+    // Vérifions aussi les statuts existants
+    const statutsExistants = await LigneCommande.distinct("statut");
+    console.log("Statuts existants dans LigneCommande:", statutsExistants);
+
+    // Agrégation corrigée
     const bestSellers = await LigneCommande.aggregate([
       // Filtrer seulement les lignes actives
       { $match: { statut: "Active" } },
@@ -161,7 +171,7 @@ exports.getBestSellers = async (req, res) => {
       // Joindre avec les informations du produit
       {
         $lookup: {
-          from: "produits",
+          from: "produits", // Nom de la collection en minuscules
           localField: "_id",
           foreignField: "_id",
           as: "produit",
@@ -186,26 +196,81 @@ exports.getBestSellers = async (req, res) => {
       },
     ]);
 
+    console.log("Résultat de l'agrégation bestSellers:", bestSellers);
+
+    // Si aucun best-seller n'est trouvé, retourner des produits populaires
+    if (bestSellers.length === 0) {
+      console.log(
+        "Aucun best-seller trouvé, retournement des produits récents"
+      );
+      const produitsRecents = await Produit.find()
+        .sort({ createdAt: -1 })
+        .limit(parseInt(limit));
+
+      const bestSellersFallback = produitsRecents.map((prod) => ({
+        _id: prod._id,
+        nom: prod.nom,
+        description: prod.description,
+        image: prod.image,
+        prix: prod.prix,
+        reference: prod.reference,
+        totalVentes: 0,
+        nombreCommandes: 0,
+      }));
+
+      return res.status(200).json(bestSellersFallback);
+    }
+
     res.status(200).json(bestSellers);
   } catch (error) {
     console.error("Erreur récupération best-sellers:", error);
-    res.status(500).json({ message: "Erreur serveur" });
+
+    // Fallback en cas d'erreur
+    try {
+      const produits = await Produit.find().sort({ createdAt: -1 }).limit(10);
+
+      const fallbackData = produits.map((prod) => ({
+        _id: prod._id,
+        nom: prod.nom,
+        description: prod.description,
+        image: prod.image,
+        prix: prod.prix,
+        reference: prod.reference,
+        totalVentes: 0,
+        nombreCommandes: 0,
+      }));
+
+      res.status(200).json(fallbackData);
+    } catch (fallbackError) {
+      res
+        .status(500)
+        .json({ message: "Erreur serveur", error: fallbackError.message });
+    }
   }
 };
-
-// Alternative: Best-sellers avec pagination
+// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+// Récupérer les best-sellers avec debug
 exports.getBestSellersPaginated = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
+    console.log("Recherche des best-sellers...");
+
+    // D'abord, vérifions ce qu'il y a dans LigneCommande
+    const toutesLignes = await LigneCommande.find();
+    console.log("Toutes les lignes de commande:", toutesLignes);
+
+    // Essayons sans filtrer par statut d'abord
     const bestSellers = await LigneCommande.aggregate([
-      { $match: { statut: "Active" } },
+      // Enlever le filtre temporairement pour debug
+      // { $match: { statut: "Active" } },
       {
         $group: {
           _id: "$produitId",
           totalVentes: { $sum: "$quantite" },
           nombreCommandes: { $sum: 1 },
+          statuts: { $push: "$statut" }, // Pour voir les statuts
         },
       },
       { $sort: { totalVentes: -1 } },
@@ -228,16 +293,21 @@ exports.getBestSellersPaginated = async (req, res) => {
           prix: "$produit.prix",
           totalVentes: 1,
           nombreCommandes: 1,
+          statuts: 1, // Pour debug
         },
       },
     ]);
 
+    console.log("Résultat de l'agrégation:", bestSellers);
+
     // Compter le total
     const totalCount = await LigneCommande.aggregate([
-      { $match: { statut: "Active" } },
+      // { $match: { statut: "Active" } },
       { $group: { _id: "$produitId" } },
       { $count: "total" },
     ]);
+
+    console.log("Total count:", totalCount);
 
     res.status(200).json({
       bestSellers,
