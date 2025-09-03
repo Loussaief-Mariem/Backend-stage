@@ -153,3 +153,72 @@ exports.getTotalPanier = async (req, res) => {
     res.status(500).json({ message: "Erreur lors du calcul du total", error });
   }
 };
+//$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+// Obtenir le nombre d'articles dans un panier
+exports.getNombreArticles = async (req, res) => {
+  try {
+    const panierId = req.params.id;
+
+    // Vérifier si panierId est un ObjectId valide
+    if (!mongoose.Types.ObjectId.isValid(panierId)) {
+      return res.status(400).json({ message: "ID panier invalide" });
+    }
+
+    // Compter les articles actifs dans le panier
+    const nombreArticles = await LignePanier.aggregate([
+      {
+        $match: {
+          panierId: new mongoose.Types.ObjectId(panierId),
+          est_actif: true,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          nombreArticles: { $sum: "$quantite" },
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      panierId,
+      nombreArticles:
+        nombreArticles.length > 0 ? nombreArticles[0].nombreArticles : 0,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Erreur lors du calcul du nombre d'articles",
+      error: error.message,
+    });
+  }
+}; // Obtenir le panier actif d'un client
+exports.getPanierActifByClient = async (req, res) => {
+  try {
+    const clientId = req.params.clientId;
+
+    // Vérifier si clientId est un ObjectId valide
+    if (!mongoose.Types.ObjectId.isValid(clientId)) {
+      return res.status(400).json({ message: "ID client invalide" });
+    }
+
+    // Trouver le panier actif du client
+    const panier = await Panier.findOne({
+      clientId: new mongoose.Types.ObjectId(clientId),
+      est_actif: true,
+    });
+
+    if (!panier) {
+      return res
+        .status(404)
+        .json({ message: "Aucun panier actif trouvé pour ce client" });
+    }
+
+    res.status(200).json(panier);
+  } catch (error) {
+    res.status(500).json({
+      message: "Erreur lors de la récupération du panier actif",
+      error: error.message,
+    });
+  }
+};
