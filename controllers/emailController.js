@@ -1,6 +1,6 @@
 const Facture = require("../models/facture.model");
 const Commande = require("../models/commande.model");
-const Client = require("../models/client.model");
+
 const LigneFacture = require("../models/ligneFacture.model");
 const { sendEmail } = require("../services/emailService");
 const LigneCommande = require("../models/ligneCommande.model");
@@ -56,13 +56,12 @@ exports.sendFactureEmail = async (req, res) => {
       facture = new Facture({ commandeId });
       await facture.save({ session });
 
-      const lignesFacture = lignesCommande.map((ligne, index) => ({
+      const lignesFacture = lignesCommande.map((ligne) => ({
         factureId: facture._id,
         produitId: ligne.produitId._id,
         quantite: ligne.quantite,
         prixUnitaire: ligne.prixUnitaire,
         tvaProduit: ligne.produitId.TVA,
-        numLigne: index + 1,
       }));
 
       await LigneFacture.insertMany(lignesFacture, { session });

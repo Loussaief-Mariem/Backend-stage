@@ -111,7 +111,13 @@ exports.getContactsToday = async (req, res) => {
         $gte: startOfDay,
         $lte: endOfDay,
       },
-    }).populate("clientId");
+    }).populate({
+      path: "clientId",
+      populate: {
+        path: "utilisateurId",
+        select: "nom prenom email"
+      }
+    });
 
     res.status(200).json({
       count: contacts.length,

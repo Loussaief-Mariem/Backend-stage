@@ -2,18 +2,21 @@ const express = require("express");
 const router = express.Router();
 const ligneCommandeController = require("../controllers/ligneCommandeController");
 
-// GET toutes les lignes de commande
+// ------------------ Routes Lignes de Commande ------------------
+
+// GET - Obtenir toutes les lignes de commande
 router.get("/", ligneCommandeController.getAllLignesCommande);
 
-// GET une ligne par ID
+// GET - Obtenir toutes les lignes de commande actives
+router.get("/actives", ligneCommandeController.getLignesCommandeActives);
+
+// GET - Obtenir une ligne de commande par son ID
 router.get("/:id", ligneCommandeController.getLigneCommandeById);
 
-// PUT mise à jour d'une ligne
+// PUT - Mettre à jour une ligne de commande par son ID
 router.put("/:id", ligneCommandeController.updateLigneCommande);
 
-// DELETE suppression d'une ligne
+// DELETE - Annuler une ligne de commande par son ID
 router.delete("/:id", ligneCommandeController.annulerLigneCommande);
-// Get tous les lignes actives
-router.get("/actives", ligneCommandeController.getLignesCommandeActives);
 
 module.exports = router;

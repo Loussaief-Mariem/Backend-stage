@@ -26,8 +26,11 @@ exports.getClientsPagines = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    // Compter le total des clients
-    const totalClients = await Client.countDocuments();
+    // Filtrer les clients qui ont un utilisateurId valide
+    const validClients = clients.filter(client => client.utilisateurId !== null);
+
+    // Compter le total des clients avec utilisateurId valide
+    const totalClients = await Client.countDocuments({ utilisateurId: { $ne: null } });
 
     // Réponse avec pagination
     res.status(200).json({
@@ -35,7 +38,7 @@ exports.getClientsPagines = async (req, res) => {
       limit,
       totalClients,
       totalPages: Math.ceil(totalClients / limit),
-      clients,
+      clients: validClients,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

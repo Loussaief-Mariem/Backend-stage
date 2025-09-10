@@ -1,6 +1,7 @@
 const Produit = require("../models/produit.model");
 const LigneCommande = require("../models/ligneCommande.model");
-
+const mongoose = require("mongoose");
+const Categorie = require("../models/categorie.model"); // ← AJOUTEZ CETTE LI
 //  Ajouter un produit
 exports.createProduit = async (req, res) => {
   try {
@@ -318,5 +319,216 @@ exports.getBestSellersPaginated = async (req, res) => {
   } catch (error) {
     console.error("Erreur récupération best-sellers paginés:", error);
     res.status(500).json({ message: "Erreur serveur" });
+  }
+};
+//
+// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+// Obtenir les produits par ID de catégorie avec pagination
+exports.getProduitsByCategorieIdPagination = async (req, res) => {
+  try {
+    const { categorieId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+
+    console.log("Recherche de catégorie par ID:", categorieId);
+
+    // Vérifier si l'ID est valide
+    if (!mongoose.Types.ObjectId.isValid(categorieId)) {
+      return res.status(400).json({ message: "ID de catégorie invalide" });
+    }
+
+    // Trouver la catégorie par son ID
+    const categorie = await Categorie.findById(categorieId);
+
+    if (!categorie) {
+      console.log("Catégorie non trouvée avec ID:", categorieId);
+      return res.status(404).json({
+        message: `Catégorie avec ID "${categorieId}" non trouvée`,
+      });
+    }
+
+    console.log("Catégorie trouvée:", categorie.nom);
+
+    // Calcul de la pagination
+    const skip = (page - 1) * limit;
+
+    // Récupérer les produits de cette catégorie avec pagination
+    const produits = await Produit.find({ categorieId: categorie._id })
+      .populate("categorieId")
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Compter le total de produits dans cette catégorie
+    const totalProduits = await Produit.countDocuments({
+      categorieId: categorie._id,
+    });
+
+    res.status(200).json({
+      categorie: {
+        _id: categorie._id,
+        nom: categorie.nom,
+        description: categorie.description,
+        image: categorie.image,
+        famille: categorie.famille,
+      },
+      produits,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalProduits,
+        totalPages: Math.ceil(totalProduits / limit),
+      },
+    });
+  } catch (err) {
+    console.error("Erreur getProduitsByCategorieId:", err);
+    res.status(500).json({
+      message:
+        "Erreur lors de la récupération des produits par ID de catégorie",
+      error: err.message,
+    });
+  }
+};
+
+// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+// Obtenir les produits par ID de catégorie (sans pagination - version simple)
+exports.getProduitsByCategorieId = async (req, res) => {
+  try {
+    const { categorieId } = req.params;
+
+    console.log("Recherche de catégorie par ID:", categorieId);
+
+    // Vérifier si l'ID est valide
+    if (!mongoose.Types.ObjectId.isValid(categorieId)) {
+      return res.status(400).json({ message: "ID de catégorie invalide" });
+    }
+
+    // Trouver la catégorie par son ID
+    const categorie = await Categorie.findById(categorieId);
+
+    if (!categorie) {
+      return res.status(404).json({
+        message: `Catégorie avec ID "${categorieId}" non trouvée`,
+      });
+    }
+
+    // Récupérer tous les produits de cette catégorie
+    const produits = await Produit.find({
+      categorieId: categorie._id,
+    }).populate("categorieId");
+
+    res.status(200).json({
+      categorie: {
+        _id: categorie._id,
+        nom: categorie.nom,
+        description: categorie.description,
+        image: categorie.image,
+        famille: categorie.famille,
+      },
+      produits,
+      count: produits.length,
+    });
+  } catch (err) {
+    console.error("Erreur getProduitsByCategorieIdSimple:", err);
+    res.status(500).json({
+      message:
+        "Erreur lors de la récupération des produits par ID de catégorie",
+      error: err.message,
+    });
+  }
+};
+
+// Rechercher des produits par nom
+exports.searchProducts = async (req, res) => {
+  try {
+    const { q: searchQuery, page = 1, limit = 12 } = req.query;
+
+    if (!searchQuery || searchQuery.trim() === "") {
+      return res
+        .status(400)
+        .json({ message: "Le terme de recherche est requis" });
+    }
+
+    const skip = (page - 1) * limit;
+    const regex = new RegExp(searchQuery, "i");
+
+    // Rechercher les produits dont le nom correspond exactement ou partiellement
+    const exactMatch = await Produit.findOne({
+      nom: { $regex: new RegExp(`^${searchQuery}$`, "i") },
+    }).populate("categorieId");
+
+    let produits;
+    let totalProduits;
+
+    if (exactMatch) {
+      // Si on trouve une correspondance exacte, retourner seulement ce produit
+      produits = [exactMatch];
+      totalProduits = 1;
+    } else {
+      // Sinon, rechercher les correspondances partielles
+      produits = await Produit.find({ nom: { $regex: regex } })
+        .populate("categorieId")
+        .skip(skip)
+        .limit(parseInt(limit));
+
+      // Compter le total de résultats pour les correspondances partielles
+      totalProduits = await Produit.countDocuments({
+        nom: { $regex: regex },
+      });
+
+      // Si aucune correspondance partielle n'est trouvée, retourner tous les produits
+      if (totalProduits === 0) {
+        produits = await Produit.find()
+          .populate("categorieId")
+          .skip(skip)
+          .limit(parseInt(limit));
+
+        totalProduits = await Produit.countDocuments();
+      }
+    }
+
+    res.status(200).json({
+      produits,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalProduits,
+        totalPages: Math.ceil(totalProduits / limit),
+        searchQuery,
+        exactMatch: !!exactMatch,
+      },
+    });
+  } catch (err) {
+    console.error("Erreur recherche produits:", err);
+    res.status(500).json({
+      message: "Erreur lors de la recherche",
+      error: err.message,
+    });
+  }
+}; // Mettre à jour uniquement la quantité en stock
+exports.updateQuantiteStock = async (req, res) => {
+  try {
+    const { stock } = req.body;
+
+    if (stock === undefined) {
+      return res.status(400).json({ message: "Le champ 'stock' est requis" });
+    }
+
+    const produit = await Produit.findById(req.params.id);
+    if (!produit) {
+      return res.status(404).json({ message: "Produit non trouvé" });
+    }
+
+    produit.stock = stock;
+    await produit.save();
+
+    res.status(200).json({
+      message: "Stock mis à jour avec succès",
+      produit,
+    });
+  } catch (err) {
+    console.error("Erreur updateQuantiteStock:", err);
+    if (err.name === "ValidationError") {
+      return res.status(400).json({ message: err.message, errors: err.errors });
+    }
+    res.status(500).json({ message: "Erreur serveur", error: err.message });
   }
 };

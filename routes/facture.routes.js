@@ -2,15 +2,21 @@ const express = require("express");
 const router = express.Router();
 const factureController = require("../controllers/factureController");
 
+// ------------------ Routes Factures ------------------
+
+// POST - Créer une nouvelle facture
 router.post("/", factureController.creerFacture);
-// GET toutes les factures
+
+// GET - Obtenir toutes les factures
 router.get("/", factureController.getFactures);
 
-// GET facture par ID
+// GET - Obtenir une facture par son ID
 router.get("/:id", factureController.getFactureById);
-// update
+
+// PUT - Mettre à jour une facture par son ID
 router.put("/:id", factureController.updateFacture);
-// DELETE
+
+// DELETE - Annuler / supprimer une facture par son ID
 router.delete("/:id", factureController.annulerFacture);
 
 module.exports = router;

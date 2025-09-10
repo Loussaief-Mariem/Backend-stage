@@ -62,39 +62,27 @@ exports.annulerLignesFacture = async (req, res) => {
     res.status(500).json({ message: "Erreur lors de l'annulation", error });
   }
 };
-// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-// annulée ligne facture
+
+// DELETE - Annuler une seule ligne de facture par son ID
 exports.annulerLigneFacture = async (req, res) => {
   try {
-    const { factureId, numLigne } = req.params;
+    const { id } = req.params;
 
-    //  Trouver et annuler la ligne active
-    const ligneModifiee = await LigneFacture.findOneAndUpdate(
-      { factureId, numLigne, statut: "Active" },
-      { statut: "Annulé", numLigne: null },
+    const ligne = await LigneFacture.findOneAndUpdate(
+      { _id: id, statut: "Active" },
+      { statut: "Annulé" },
       { new: true }
     );
 
-    if (!ligneModifiee) {
-      return res.status(404).json({
-        message: "Ligne facture non trouvée ou déjà annulée",
-      });
-    }
-
-    // Réorganiser numéros des lignes actives
-    const lignesActives = await LigneFacture.find({
-      factureId,
-      statut: "Active",
-    }).sort({ numLigne: 1 });
-
-    for (let i = 0; i < lignesActives.length; i++) {
-      lignesActives[i].numLigne = i + 1;
-      await lignesActives[i].save();
+    if (!ligne) {
+      return res
+        .status(404)
+        .json({ message: "Ligne facture non trouvée ou déjà annulée" });
     }
 
     res.status(200).json({
-      message: "Ligne facture annulée et numéros réorganisés",
-      ligne: ligneModifiee,
+      message: "Ligne facture annulée avec succès",
+      ligne,
     });
   } catch (error) {
     res.status(500).json({

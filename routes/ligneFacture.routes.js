@@ -2,16 +2,18 @@ const express = require("express");
 const router = express.Router();
 const ligneFactureController = require("../controllers/ligneFactureController");
 
-// GET toutes les lignes
+// ------------------ Routes Lignes de Facture ------------------
+
+// GET - Obtenir toutes les lignes de facture
 router.get("/", ligneFactureController.getAllLignesFacture);
 
-// GET ligne par ID
+// GET - Obtenir une ligne de facture par son ID
 router.get("/:id", ligneFactureController.getLigneFactureById);
 
-// PUT mise à jour d'une ligne
+// PUT - Mettre à jour une ligne de facture par son ID
 router.put("/:id", ligneFactureController.updateLigneFacture);
 
-// DELETE (annuler toutes les lignes d'une facture)
+// DELETE - Annuler toutes les lignes d'une facture (par factureId)
 router.delete(
   "/annuler/:factureId",
   ligneFactureController.annulerLignesFacture

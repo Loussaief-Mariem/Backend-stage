@@ -11,10 +11,7 @@ const ligneCommandeSchema = new mongoose.Schema({
     ref: "Produit",
     required: true,
   },
-  numLigne: {
-    type: Number,
-    min: 1,
-  },
+
   quantite: {
     type: Number,
     required: true,
@@ -35,9 +32,5 @@ const ligneCommandeSchema = new mongoose.Schema({
 });
 
 ligneCommandeSchema.index({ commandeId: 1, produitId: 1 }, { unique: true });
-ligneCommandeSchema.index(
-  { commandeId: 1, numLigne: 1 },
-  { unique: true, partialFilterExpression: { statut: "Active" } }
-);
 
 module.exports = mongoose.model("LigneCommande", ligneCommandeSchema);

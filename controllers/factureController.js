@@ -26,8 +26,9 @@ exports.creerFacture = async (req, res) => {
       });
     }
 
+    // Récupérer les lignes de commande actives
     const lignesCommande = await LigneCommande.find({
-      commandeId: commandeId,
+      commandeId,
       statut: "Active",
     }).populate("produitId");
 
@@ -36,29 +37,24 @@ exports.creerFacture = async (req, res) => {
     }
 
     // Créer la facture
-    const nouvelleFacture = await Facture.create({
-      commandeId,
-    });
+    const nouvelleFacture = await Facture.create({ commandeId });
 
-    //  Associer la facture à la commande
+    // Associer la facture à la commande
     commande.factureId = nouvelleFacture._id;
     await commande.save();
 
-    const lignesFacture = lignesCommande.map((ligne, index) => ({
+    // Créer les lignes facture
+    const lignesFacture = lignesCommande.map((ligne) => ({
       factureId: nouvelleFacture._id,
       produitId: ligne.produitId,
       quantite: ligne.quantite,
       prixUnitaire: ligne.prixUnitaire,
       tvaProduit: ligne.produitId.TVA,
-      numLigne: index + 1,
     }));
 
     await LigneFacture.insertMany(lignesFacture);
-    // for (const ligne of lignesFacture) {
-    //   const produit = await Produit.findById(ligne.produitId);
-    //   ligne.tvaProduit = produit.TVA;
 
-    // }
+    // Charger facture complète
     const factureComplete = await Facture.findById(nouvelleFacture._id)
       .populate("commandeId")
       .populate("lignesFacture");

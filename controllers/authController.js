@@ -68,6 +68,7 @@ exports.register = async (req, res) => {
     res.status(201).json({
       message: "Utilisateur inscrit avec succès",
       user: newUser,
+      client: newClient,
     });
   } catch (err) {
     res.status(500).json({ message: "Erreur serveur lors de l'inscription" });

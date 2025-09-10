@@ -16,6 +16,8 @@ const panierSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Un seul panier actif par client
 panierSchema.index(
   { clientId: 1, est_actif: 1 },
   {
@@ -24,9 +26,9 @@ panierSchema.index(
   }
 );
 
+// Hook : désactiver les anciens paniers actifs de ce client
 panierSchema.pre("save", async function (next) {
   if (this.est_actif && this.isNew) {
-    // Désactiver les autres paniers actifs de ce client
     await this.constructor.updateMany(
       { clientId: this.clientId, est_actif: true },
       { est_actif: false }

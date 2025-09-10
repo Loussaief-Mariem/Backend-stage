@@ -9,7 +9,6 @@ const LigneFacture = require("../models/ligneFacture.model");
 // Créer une commande
 exports.createCommande = async (req, res) => {
   const session = await mongoose.startSession();
-
   try {
     session.startTransaction();
 
@@ -21,14 +20,14 @@ exports.createCommande = async (req, res) => {
       await session.abortTransaction();
       return res.status(404).json({ message: "Panier introuvable" });
     }
-    // verifier le panier est active
+
     if (panier.est_actif === false) {
       return res.status(400).json({
-        message:
-          "Impossible de créer une commande pour un panier n'est pas active",
+        message: "Impossible de créer une commande pour un panier inactif",
       });
     }
-    // Vérifier si commande existe déjà pour ce panier
+
+    // Vérifier si commande existe déjà
     const commandeExistante = await Commande.findOne({
       panierId,
       est_actif: true,
@@ -56,7 +55,7 @@ exports.createCommande = async (req, res) => {
 
     await commande.save({ session });
 
-    //  Créer lignes commande et calculer total
+    // Créer lignes commande
     let total = 0;
     const ligneCommandeOps = lignesPanier.map((ligne) => {
       total += ligne.quantite * ligne.prixUnitaire;
@@ -65,7 +64,6 @@ exports.createCommande = async (req, res) => {
           document: {
             commandeId: commande._id,
             produitId: ligne.produitId,
-            numLigne: ligne.numLigne,
             quantite: ligne.quantite,
             prixUnitaire: ligne.prixUnitaire,
           },
@@ -104,6 +102,7 @@ exports.createCommande = async (req, res) => {
     session.endSession();
   }
 };
+
 // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 exports.getCommandesPagines = async (req, res) => {
   try {
@@ -398,5 +397,30 @@ exports.annulerCommandeGlobale = async (req, res) => {
       .json({ message: "Erreur lors de l'annulation globale", error });
   } finally {
     session.endSession();
+  }
+};
+/////////////////////////////////:
+exports.getCommandesByIdClient = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+
+    const commandes = await Commande.find({ clientId })
+      .populate({
+        path: "clientId",
+        populate: { path: "utilisateurId" },
+      })
+      .populate("factureId")
+      .sort({ createdAt: -1 });
+
+    if (!commandes || commandes.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "Aucune commande trouvée pour ce client" });
+    }
+
+    res.status(200).json(commandes);
+  } catch (err) {
+    console.error("Erreur getCommandesByIdClient:", err);
+    res.status(500).json({ message: "Erreur serveur" });
   }
 };
