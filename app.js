@@ -43,9 +43,8 @@ app.use("/api/auth", authRouter);
 app.use("/api/headers", headerRouter);
 
 // Frontend React (build)
-
 app.use(express.static(path.join(__dirname, "./client/build")));
-app.get("*", (req, res) => {
+app.get("/{*any}", (req, res) => {
   res.sendFile(path.join(__dirname, "./client/build/index.html"));
 });
 
