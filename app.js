@@ -8,16 +8,7 @@ const app = express();
 dotenv.config();
 
 // Middleware
-app.use(
-  cors({
-    origin: [
-      "http://localhost:3000",
-      "https://frontend-stage-amber.vercel.app",
-      "https://frontend-stage-bmu5yhxd3-mariems-projects-43bec416.vercel.app",
-    ],
-    credentials: true,
-  })
-);
+app.use(cors());
 app.use(express.json());
 
 // Routes API
@@ -52,10 +43,10 @@ app.use("/api/auth", authRouter);
 app.use("/api/headers", headerRouter);
 
 // Frontend React (build)
-// app.use(express.static(path.join(__dirname, "./client/build/dist")));
-// app.get("/{*any}", (req, res) => {
-//   res.sendFile(path.join(__dirname, "./client/build/dist/index.html"));
-// });
+app.use(express.static(path.join(__dirname, "./client/build/dist")));
+app.get("/{*any}", (req, res) => {
+  res.sendFile(path.join(__dirname, "./client/build/dist/index.html"));
+});
 
 // Connexion DB + démarrage serveur
 connectDB()
